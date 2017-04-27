@@ -75,6 +75,15 @@ class SyncFiles
     end
   end
 
+  def requires_fswatch()
+    status = c.run %W{which fswatch}
+    unless status.success?
+      c.error "fswatch not installed."
+      STDERR.puts "Try brew install fswatch"
+      exit 1
+    end
+  end
+
   def watch_path(src, dst)
     Open3.popen3(*%W{fswatch -o #{src}}) do |stdin, stdout, stderr, thread|
       stdin.close
@@ -99,6 +108,7 @@ class SyncFiles
   end
 
   def start_watching_sync()
+    requires_fswatch
     env = c.load_env
     File.open(log_file_name, "w") {} # Create and truncate if exists.
     env.source_file_paths.each do |spec|
