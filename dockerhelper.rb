@@ -8,7 +8,7 @@ class DockerHelper
   def requires_docker()
     status = c.run %W{which docker}
     unless status.success?
-      error "docker not installed."
+      c.error "docker not installed."
       STDERR.puts "Installation instructions:"
       STDERR.puts "  https://www.docker.com/community-edition"
       exit 1
