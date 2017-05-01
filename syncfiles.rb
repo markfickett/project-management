@@ -16,6 +16,18 @@ class SyncFiles
     ".rsync.log"
   end
 
+  def get_dest_path(src, dst)
+    if dst.nil?
+      dst = src
+    end
+    dst = dst.split(/\//).reverse.drop(1).reverse.join("/")
+    if not dst.empty?
+      dst = "/w/#{dst}"
+    else
+      dst = "/w"
+    end
+  end
+
   def start_rsync_container()
     env = c.load_env
     c.docker.requires_docker
@@ -35,24 +47,13 @@ class SyncFiles
     c.run_inline %W{docker rm #{env.namespace}-rsync}
   end
 
-  def ensure_path(dst)
-    dst = dst.split(/\//).reverse.drop(1).reverse.join("/")
-    if not dst.empty?
-      c.run_inline %W{docker run --rm -v #{shared_vol}:/w tjamet/rsync mkdir -p /w/#{dst}}
-    end
+  def ensure_dest_dir(dst)
+    c.run_inline %W{docker run --rm -v #{shared_vol}:/w tjamet/rsync mkdir -p /w/#{dst}}
   end
 
   def rsync_path(src, dst, log)
     env = c.load_env
-    if dst.nil?
-      dst = src
-    end
-    dst = dst.split(/\//).reverse.drop(1).reverse.join("/")
-    if not dst.empty?
-      dst = "/w/#{dst}"
-    else
-      dst = "/w"
-    end
+    dst = get_dest_path(src, dst)
     rsync_remote_shell = "docker exec -i"
     cmd = %W{
       rsync --blocking-io -azlv --delete -e #{rsync_remote_shell}
@@ -95,14 +96,13 @@ class SyncFiles
 
   def perform_initial_sync()
     env = c.load_env
-    env.source_file_paths.each do |spec|
-      if spec.is_a?(Hash)
-        spec.each do |k, v|
-          ensure_path v
-          rsync_path k, v, false
-        end
-      else
-        rsync_path spec, nil, false
+    env.source_file_paths.each do |src_path|
+      rsync_path src_path, nil, false
+    end
+    ensure_dest_dir env.static_file_dest
+    Dir.foreach(env.static_file_src) do |entry|
+      unless entry.start_with?(".")
+        rsync_path "#{env.static_file_src}/#{entry}", "#{env.static_file_dest}/#{entry}", false
       end
     end
   end
@@ -111,14 +111,15 @@ class SyncFiles
     requires_fswatch
     env = c.load_env
     File.open(log_file_name, "w") {} # Create and truncate if exists.
-    env.source_file_paths.each do |spec|
-      if spec.is_a?(Hash)
-        spec.each do |k, v|
-          thread = Thread.new { watch_path k, v }
-          at_exit { thread.exit }
-        end
-      else
-        thread = Thread.new { watch_path spec, nil }
+    env.source_file_paths.each do |src_path|
+      thread = Thread.new { watch_path src_path, nil }
+      at_exit { thread.exit }
+    end
+    Dir.foreach(env.static_file_src) do |entry|
+      unless entry.start_with?(".")
+        thread = Thread.new {
+          watch_path "#{env.static_file_src}/#{entry}", "#{env.static_file_dest}/#{entry}"
+        }
         at_exit { thread.exit }
       end
     end

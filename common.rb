@@ -104,4 +104,16 @@ class Common
       t.value
     end
   end
+
+  def pipe(*cmds)
+    s = cmds.map { |x| x.join(" ") }
+    s = s.join(" | ")
+    STDERR.puts "+ #{s}"
+    Open3.pipeline(*cmds).each do |status|
+      unless status.success?
+        error "Piped command failed"
+        exit 1
+      end
+    end
+  end
 end
