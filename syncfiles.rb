@@ -43,8 +43,7 @@ class SyncFiles
 
   def stop_rsync_container()
     env = c.load_env
-    c.run_inline %W{docker stop #{env.namespace}-rsync}
-    c.run_inline %W{docker rm #{env.namespace}-rsync}
+    c.run_inline %W{docker rm -f #{env.namespace}-rsync}
   end
 
   def ensure_dest_dir(dst)
@@ -87,6 +86,7 @@ class SyncFiles
 
   def watch_path(src, dst)
     Open3.popen3(*%W{fswatch -o #{src}}) do |stdin, stdout, stderr, thread|
+      Thread.current["pid"] = thread.pid
       stdin.close
       stdout.each_line do |_|
         rsync_path src, dst, true
@@ -113,14 +113,20 @@ class SyncFiles
     File.open(log_file_name, "w") {} # Create and truncate if exists.
     env.source_file_paths.each do |src_path|
       thread = Thread.new { watch_path src_path, nil }
-      at_exit { thread.exit }
+      at_exit {
+        Process.kill("HUP", thread["pid"])
+        thread.join
+      }
     end
     Dir.foreach(env.static_file_src) do |entry|
       unless entry.start_with?(".")
         thread = Thread.new {
           watch_path "#{env.static_file_src}/#{entry}", "#{env.static_file_dest}/#{entry}"
         }
-        at_exit { thread.exit }
+        at_exit {
+          Process.kill("HUP", thread["pid"])
+          thread.join
+        }
       end
     end
   end
