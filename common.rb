@@ -24,6 +24,17 @@ class Common
     @sf = SyncFiles.new(self)
   end
 
+  def prefer_version(version)
+    Dir.chdir(File.dirname(__FILE__)) do
+      current_version, _ = Open3.capture2(*%W{git rev-parse --short HEAD})
+      current_version.chomp!
+      if version != current_version
+        run_inline %W{git pull origin master}
+        run_inline %W{git checkout #{version}}
+      end
+    end
+  end
+
   def print_usage()
     STDERR.puts "\nUsage: ./project.rb <command> <options>\n\n"
     STDERR.puts "COMMANDS\n\n"
