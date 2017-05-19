@@ -24,25 +24,15 @@ class DockerHelper
     end
   end
 
-  def requires_docker_gem()
-    begin
-      require "docker"
-    rescue LoadError
-      c.error "Missing docker-api gem. This makes it much easier for this script to communicate\n" \
-        "with docker. Please install the gem and then re-run. Try the following to install the gem:"
-      STDERR.puts "\n$ sudo gem install docker-api\n\n"
-      exit 1
-    end
-  end
-
   def image_exists?(name)
-    requires_docker_gem
-    Docker::Image.exist?(name)
+    requires_docker
+    fmt = "{{.Repository}}:{{.Tag}}"
+    c.capture_stdout(%W{docker images --format #{fmt}}).include?(name)
   end
 
   def ensure_image(name)
-    requires_docker_gem
-    if not Docker::Image.exist?(name)
+    requires_docker
+    if not image_exists?(name)
       c.error "Missing docker image \"#{name}\". Pulling..."
       c.run_inline(%W{docker pull #{name}})
       c.status "Image \"#{name}\" pulled."
