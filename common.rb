@@ -91,6 +91,11 @@ class Common
     end
   end
 
+  def capture_stdout(cmd)
+    output, _ = Open3.capture2(*cmd)
+    output
+  end
+
   def run_inline(cmd)
     put_command(cmd)
     if not system(*cmd)
