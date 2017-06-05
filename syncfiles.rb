@@ -128,9 +128,12 @@ class SyncFiles
   def perform_initial_sync()
     env = c.load_env
     env.source_file_paths.each do |src_path|
+      # Copying using tar ensures the destination directories will be created.
+      c.pipe(%W{tar -c #{src_path}}, %W{docker cp - #{env.namespace}-rsync:/w})
       rsync_path src_path, nil, false
     end
     if env.static_file_src
+      c.pipe(%W{tar -c #{env.static_file_src}}, %W{docker cp - #{env.namespace}-rsync:/w})
       rsync_path env.static_file_src, nil, false
     end
   end
