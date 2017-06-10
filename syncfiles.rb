@@ -108,9 +108,16 @@ class SyncFiles
 
   def link_static_files()
     env = c.load_env
+    foreach_static_file do |path, entry|
+      link_static_file "#{path}/#{entry}", "#{env.static_file_dest}/#{entry}"
+    end
+  end
+
+  def foreach_static_file()
+    env = c.load_env
     Dir.foreach(env.static_file_src) do |entry|
       unless [".", ".."].include?(entry)
-        link_static_file "#{env.static_file_src}/#{entry}", "#{env.static_file_dest}/#{entry}"
+        yield env.static_file_src, entry
       end
     end
   end
