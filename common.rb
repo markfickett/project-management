@@ -133,3 +133,17 @@ class Common
     end
   end
 end
+
+def upgrade_self()
+  c = Common.new
+  Dir.chdir(".project/common") do
+    c.run_inline %W{git pull}
+  end
+  c.status "Tools upgraded to latest version."
+end
+
+Common.register_command({
+  :invocation => "upgrade-self",
+  :description => "Upgrades this project tool to the latest version.",
+  :fn => Proc.new { |*args| upgrade_self(*args) }
+})
