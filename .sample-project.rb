@@ -6,6 +6,11 @@ unless Dir.exists? ".project/common"
 end
 
 require_relative ".project/common/common"
+Dir.foreach(".project") do |item|
+  unless item =~ /^\.\.?$/ || item == "common"
+    require_relative ".project/#{item}"
+  end
+end
 
 c = Common.new
 
