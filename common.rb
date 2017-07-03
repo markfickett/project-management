@@ -99,6 +99,7 @@ class Common
   def run_inline(cmd)
     put_command(cmd)
     if not system(*cmd)
+      STDERR.puts "Command failed (stderr suppressed)."
       exit $?.exitstatus
     end
   end
