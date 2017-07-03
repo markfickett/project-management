@@ -1,8 +1,14 @@
 #!/usr/bin/env ruby
 
 unless Dir.exists? ".project/common"
-  system(*%W{mkdir -p .project})
-  system(*%W{git clone https://github.com/dmohs/project-management.git .project/common})
+  unless system(*%W{mkdir -p .project})
+    STDERR.puts "mkdir failed."
+    exit 1
+  end
+  unless system(*%W{git clone https://github.com/dmohs/project-management.git .project/common})
+    STDERR.puts "git clone failed."
+    exit 1
+  end
 end
 
 require_relative ".project/common/common"
