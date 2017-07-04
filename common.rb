@@ -98,8 +98,12 @@ class Common
 
   def run_inline(cmd)
     put_command(cmd)
-    if not system(*cmd)
-      STDERR.puts "Command failed (stderr suppressed)."
+    # system would be nice, but it doesn't show stderr.
+    fork do
+      exec *cmd
+    end
+    Process.wait
+    if !$?.success?
       exit $?.exitstatus
     end
   end
