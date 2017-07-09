@@ -136,11 +136,17 @@ class SyncFiles
     env = c.load_env
     env.source_file_paths.each do |src_path|
       # Copying using tar ensures the destination directories will be created.
-      c.pipe(%W{tar -c #{src_path}}, %W{docker cp - #{env.namespace}-rsync:/w})
+      c.pipe(
+        %W{env COPYFILE_DISABLE=1 tar -c #{src_path}},
+        %W{docker cp - #{env.namespace}-rsync:/w}
+      )
       rsync_path src_path, nil, false
     end
     if env.static_file_src
-      c.pipe(%W{tar -c #{env.static_file_src}}, %W{docker cp - #{env.namespace}-rsync:/w})
+      c.pipe(
+        %W{env COPYFILE_DISABLE=1 tar -c #{env.static_file_src}},
+        %W{docker cp - #{env.namespace}-rsync:/w}
+      )
       rsync_path env.static_file_src, nil, false
     end
   end
@@ -148,7 +154,11 @@ class SyncFiles
   def start_watching_sync()
     env = c.load_env
     File.open(log_file_name, "w") {} # Create and truncate if exists.
-    (env.source_file_paths + [env.static_file_src]).each do |src_path|
+    paths_to_watch = env.source_file_paths
+    if env.static_file_src
+      paths_to_watch += [env.static_file_src]
+    end
+    paths_to_watch.each do |src_path|
       thread = Thread.new { watch_path src_path, nil }
       at_exit {
         Process.kill("HUP", thread["pid"])
