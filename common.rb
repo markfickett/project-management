@@ -98,13 +98,21 @@ class Common
 
   def run_inline(cmd)
     put_command(cmd)
-    # system would be nice, but it doesn't show stderr.
-    fork do
-      exec *cmd
-    end
-    Process.wait
-    if !$?.success?
-      exit $?.exitstatus
+
+    # I started with `system`, but it was hiding stderr when the command failed.
+    # I then tried `fork`, but that broke other stuff.
+    # I'm leaving in a `spawn` option, but now I can't reproduce the stderr hiding from `system`,
+    # so it might not be necessary.
+    if ENV["PROJECTRB_DEBUG"] == "true"
+      pid = spawn(*cmd)
+      Process.wait pid
+      if !$?.success?
+        exit $?.exitstatus
+      end
+    else
+      if not system(*cmd)
+        exit $?.exitstatus
+      end
     end
   end
 
