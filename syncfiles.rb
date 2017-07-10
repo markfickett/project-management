@@ -43,6 +43,12 @@ class SyncFiles
     ".rsync.log"
   end
 
+  def log_message(s)
+    File.open(log_file_name, "a") do |file|
+      file.write s
+    end
+  end
+
   def get_dest_path(src, dst)
     if dst.nil?
       dst = src
@@ -91,9 +97,7 @@ class SyncFiles
           c.error e.read
           exit t.value.exitstatus
         end
-        File.open(log_file_name, "a") do |file|
-          file.write o.read
-        end
+        log_message o.read
       end
     else
       c.run_inline cmd
@@ -108,8 +112,14 @@ class SyncFiles
 
   def link_static_files()
     env = c.load_env
+    threads = []
     foreach_static_file do |path, entry|
-      link_static_file "#{path}/#{entry}", "#{env.static_file_dest}/#{entry}"
+      threads << Thread.new do
+        link_static_file "#{path}/#{entry}", "#{env.static_file_dest}/#{entry}"
+      end
+    end
+    threads.each do |t|
+      t.join
     end
   end
 
@@ -183,8 +193,8 @@ class SyncFiles
     end
     if fswatch_installed
       c.status "Starting rsync container..."
-      start_rsync_container
       at_exit { stop_rsync_container }
+      start_rsync_container
       c.status "Performing initial file sync..."
       perform_initial_sync
       start_watching_sync
