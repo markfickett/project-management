@@ -106,7 +106,7 @@ class SyncFiles
 
   def link_static_file(src, dst)
     env = c.load_env
-    cmd = %W{docker run --rm -w /w} + get_volume_mounts + %W{alpine ln -sf /w/#{src} /w/#{dst}}
+    cmd = %W{docker run --rm -w /w} + get_volume_mounts + %W{alpine ln -snf /w/#{src} /w/#{dst}}
     c.run_inline cmd
   end
 
