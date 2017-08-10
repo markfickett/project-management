@@ -116,6 +116,13 @@ class Common
     end
   end
 
+  def run_inline_swallowing_interrupt(cmd)
+    begin
+      run_inline cmd
+    rescue Interrupt
+    end
+  end
+
   def run_or_fail(cmd)
     put_command(cmd)
     Open3.popen3(*cmd) do |i, o, e, t|
@@ -154,9 +161,3 @@ def upgrade_self()
   end
   c.status "Tools upgraded to latest version."
 end
-
-Common.register_command({
-  :invocation => "upgrade-self",
-  :description => "Upgrades this project tool to the latest version.",
-  :fn => Proc.new { |*args| upgrade_self(*args) }
-})
