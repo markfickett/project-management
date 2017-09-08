@@ -149,7 +149,7 @@ end
 
 def upgrade_self()
   c = Common.new
-  Dir.chdir(".project/common") do
+  Dir.chdir(File.dirname(__FILE__)) do
     c.run_inline %W{git pull}
   end
   c.status "Tools upgraded to latest version."
